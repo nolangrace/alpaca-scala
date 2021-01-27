@@ -49,17 +49,31 @@ class HammockService(configService: ConfigService) {
       hammockEvidenceEncoder: hammock.Encoder[B]): IO[A] = {
     val trueUrl = buildURI(url, queryParams)
 
-    Hammock
-      .request(
-        method,
-        trueUrl,
-        Map(
-          "APCA-API-KEY-ID" -> configService.getConfig.value.accountKey,
-          "APCA-API-SECRET-KEY" -> configService.getConfig.value.accountSecret),
-        body
-      ) // In the `request` method, you describe your HTTP request
-      .as[A]
-      .exec[IO]
+    if(configService.getConfig.value.accountOauthToken != "") {
+      Hammock
+        .request(
+          method,
+          trueUrl,
+          Map(
+            "Authorization" -> s"Bearer ${configService.getConfig.value.accountOauthToken}",
+          ),
+          body
+        ) // In the `request` method, you describe your HTTP request
+        .as[A]
+        .exec[IO]
+    } else {
+      Hammock
+        .request(
+          method,
+          trueUrl,
+          Map(
+            "APCA-API-KEY-ID" -> configService.getConfig.value.accountKey,
+            "APCA-API-SECRET-KEY" -> configService.getConfig.value.accountSecret),
+          body
+        ) // In the `request` method, you describe your HTTP request
+        .as[A]
+        .exec[IO]
+    }
   }
 }
 

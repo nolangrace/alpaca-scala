@@ -13,18 +13,20 @@ private[alpaca] class ConfigService {
 
   def loadConfig(isPaper: Option[Boolean] = None,
                  accountKey: Option[String] = None,
+                 accountOauthToken: Option[String] = None,
                  accountSecret: Option[String] = None): Eval[Config] = {
     val alpacaAccountConfig = for {
       accountKey <- accountKey
       accountSecret <- accountSecret
+      accountOauthToken <- accountOauthToken
       paperAccount <- isPaper
-    } yield Config(accountKey, accountSecret, paperAccount)
+    } yield Config(accountKey, accountSecret, accountOauthToken, paperAccount)
 
     getConfig = Eval.now {
       alpacaAccountConfig
         .orElse(loadConfigFromFile())
         .orElse(loadConfigFromEnv())
-        .getOrElse(Config("", "", isPaper = true))
+        .getOrElse(Config("", "", "", isPaper = true))
     }
 
     getConfig
@@ -35,21 +37,23 @@ private[alpaca] class ConfigService {
       config <- pureconfig.loadConfig[AlpacaConfig].toOption
       accountKey <- config.alpacaAuth.accountKey
       accountSecret <- config.alpacaAuth.accountSecret
+      accountOauth <- config.alpacaAuth.accountOauth
       paperAccount <- config.alpacaAuth.isPaper
-    } yield Config(accountKey, accountSecret, paperAccount)
+    } yield Config(accountKey, accountSecret, accountOauth, paperAccount)
   }
 
   private def loadConfigFromEnv() = {
     for {
       accountKey <- sys.env.get("accountKey")
       accountSecret <- sys.env.get("accountSecret")
+      accountOauthToken <- sys.env.get("accountOauthToken")
       isPaper <- sys.env.get("isPaper")
-    } yield Config(accountKey, accountSecret, isPaper.equalsIgnoreCase("true"))
+    } yield Config(accountKey, accountSecret, accountOauthToken, isPaper.equalsIgnoreCase("true"))
   }
 
 }
 
-case class Config(accountKey: String, accountSecret: String, isPaper: Boolean) {
+case class Config(accountKey: String, accountSecret: String, accountOauthToken:String, isPaper: Boolean) {
   var base_url: String =
     "https://api.alpaca.markets"
   var paper_url: String = "https://paper-api.alpaca.markets"
@@ -79,4 +83,5 @@ case class Config(accountKey: String, accountSecret: String, isPaper: Boolean) {
 private case class AlpacaConfig(alpacaAuth: AlpacaAuth)
 private case class AlpacaAuth(accountKey: Option[String],
                               accountSecret: Option[String],
+                              accountOauth: Option[String],
                               isPaper: Option[Boolean])
